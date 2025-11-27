@@ -17,6 +17,10 @@ const Calendar: React.FC<CalendarProps> = ({ eventData, userId, onToggleDate }) 
   const [viewMonth, setViewMonth] = useState(eventData.month);
   const [viewYear, setViewYear] = useState(eventData.year);
 
+  // Current system date for comparison (reset time to midnight)
+  const todayObj = new Date();
+  todayObj.setHours(0, 0, 0, 0);
+
   // Navigation handlers
   const prevMonth = () => {
     if (viewMonth === 0) {
@@ -67,21 +71,33 @@ const Calendar: React.FC<CalendarProps> = ({ eventData, userId, onToggleDate }) 
   const maxVotes = Math.max(Object.keys(participants).length, 1);
 
   // Heatmap color generator
-  const getDayStyle = (dateKey: string, isSelected: boolean) => {
+  const getDayStyle = (dateKey: string, isSelected: boolean, isPast: boolean, isToday: boolean) => {
     const count = voteCounts[dateKey] || 0;
     
     // Base styles
-    let className = "relative h-14 sm:h-20 w-full border border-slate-200 rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all duration-200 active:scale-95 ";
+    let className = "relative h-14 sm:h-20 w-full border rounded-lg flex flex-col items-center justify-center transition-all duration-200 ";
+
+    if (isPast) {
+      className += "bg-slate-100 border-slate-100 opacity-40 cursor-not-allowed text-slate-400 ";
+      return className; // Return early for past dates, ignore heatmap
+    } else {
+      className += "cursor-pointer active:scale-95 border-slate-200 ";
+    }
 
     if (isSelected) {
       className += "ring-2 ring-primary ring-offset-1 ";
+    } else if (isToday) {
+      // Highlight today if not selected
+      className += "border-indigo-400 border-2 bg-indigo-50/30 ";
     }
 
-    // Heatmap logic
+    // Heatmap logic (only for future dates)
     if (count === 0) {
-      className += isSelected ? "bg-white" : "bg-white hover:bg-slate-50";
+      if (!isSelected && !isToday) className += "bg-white hover:bg-slate-50";
+      if (isSelected) className += "bg-white";
     } else {
       const intensity = count / maxVotes;
+      // We override bg but keep text readable
       if (intensity <= 0.25) className += "bg-indigo-100 text-indigo-900";
       else if (intensity <= 0.5) className += "bg-indigo-300 text-indigo-900";
       else if (intensity <= 0.75) className += "bg-indigo-500 text-white";
@@ -131,15 +147,32 @@ const Calendar: React.FC<CalendarProps> = ({ eventData, userId, onToggleDate }) 
           const isSelected = userDates.includes(dateKey);
           const count = voteCounts[dateKey] || 0;
 
+          // Date Logic
+          const cellDate = new Date(viewYear, viewMonth, day);
+          // Set time to midnight for accurate comparison
+          cellDate.setHours(0, 0, 0, 0);
+          
+          const isPast = cellDate.getTime() < todayObj.getTime();
+          const isToday = cellDate.getTime() === todayObj.getTime();
+
           return (
             <div 
               key={dateKey}
-              onClick={() => onToggleDate(dateKey)}
-              className={getDayStyle(dateKey, isSelected)}
+              onClick={() => {
+                if (!isPast) onToggleDate(dateKey);
+              }}
+              className={getDayStyle(dateKey, isSelected, isPast, isToday)}
             >
-              <span className={`text-sm sm:text-lg font-bold ${count > maxVotes * 0.5 ? 'text-white' : 'text-slate-700'}`}>
-                {day}
-              </span>
+              <div className="flex flex-col items-center">
+                <span className={`text-sm sm:text-lg font-bold ${count > maxVotes * 0.5 && !isPast ? 'text-white' : ''}`}>
+                  {day}
+                </span>
+                {isToday && !isPast && (
+                  <span className={`text-[9px] font-bold leading-none mt-0.5 ${count > maxVotes * 0.5 ? 'text-indigo-100' : 'text-indigo-500'}`}>
+                    Сегодня
+                  </span>
+                )}
+              </div>
               
               {/* Indicators */}
               <div className="absolute bottom-1 right-1 flex space-x-0.5">
@@ -148,7 +181,7 @@ const Calendar: React.FC<CalendarProps> = ({ eventData, userId, onToggleDate }) 
                         <Check size={10} className="text-white" strokeWidth={4} />
                     </div>
                  )}
-                 {count > 0 && !isSelected && (
+                 {count > 0 && !isSelected && !isPast && (
                      <span className={`text-[10px] font-medium px-1 rounded-full ${count > maxVotes * 0.5 ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'}`}>
                         {count}
                      </span>
