@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, User, ArrowRight, Loader2 } from 'lucide-react';
+import { Calendar, User, ArrowRight, Loader2, CalendarRange } from 'lucide-react';
 import { createEvent, generateId } from '../services/firebase';
 
 const CreateEvent: React.FC = () => {
@@ -9,14 +9,30 @@ const CreateEvent: React.FC = () => {
   const [userName, setUserName] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // Defaults to current month
+  // Refs for programmatic access to inputs
+  const startDateRef = useRef<HTMLInputElement>(null);
+  const endDateRef = useRef<HTMLInputElement>(null);
+  
+  // Date Range State
+  // Default: Today and Today + 7 days
   const today = new Date();
-  const [month, setMonth] = useState(today.getMonth());
-  const [year, setYear] = useState(today.getFullYear());
+  const nextWeek = new Date();
+  nextWeek.setDate(today.getDate() + 7);
+
+  const formatDate = (d: Date) => d.toISOString().split('T')[0];
+
+  const [startDate, setStartDate] = useState(formatDate(today));
+  const [endDate, setEndDate] = useState(formatDate(nextWeek));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!eventName.trim() || !userName.trim()) return;
+    
+    // Validation
+    if (startDate > endDate) {
+        alert("Дата начала не может быть позже даты окончания!");
+        return;
+    }
 
     setLoading(true);
     try {
@@ -26,7 +42,7 @@ const CreateEvent: React.FC = () => {
       localStorage.setItem('df_name', userName);
 
       // 2. Create in Firebase
-      const eventId = await createEvent(eventName, month, year, userName, userId);
+      const eventId = await createEvent(eventName, startDate, endDate, userName, userId);
 
       // 3. Redirect
       navigate(`/event/${eventId}`);
@@ -38,10 +54,23 @@ const CreateEvent: React.FC = () => {
     }
   };
 
-  const months = [
-    "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", 
-    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
-  ];
+  const openDatePicker = (ref: React.RefObject<HTMLInputElement>) => {
+    const element = ref.current;
+    if (element) {
+        try {
+            // Modern browsers support showing the picker programmatically
+            // Use type casting and typeof check to avoid TS narrowing issues (e.g. dead code detection)
+            if (typeof (element as any).showPicker === 'function') {
+                (element as any).showPicker();
+            } else {
+                element.focus();
+            }
+        } catch (error) {
+            console.log(error);
+            element.focus();
+        }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
@@ -57,7 +86,7 @@ const CreateEvent: React.FC = () => {
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">Название встречи</label>
             <div className="relative group">
-                <Calendar className="absolute left-3 top-3.5 text-slate-400 group-focus-within:text-primary transition-colors" size={20} />
+                <Calendar className="absolute left-3 top-3.5 text-slate-400 group-focus-within:text-primary transition-colors pointer-events-none" size={20} />
                 <input
                     type="text"
                     value={eventName}
@@ -69,39 +98,42 @@ const CreateEvent: React.FC = () => {
             </div>
           </div>
 
-          {/* Month/Year Selection */}
+          {/* Date Range Selection */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Месяц начала</label>
-                <div className="relative">
-                  <select 
-                      value={month}
-                      onChange={(e) => setMonth(Number(e.target.value))}
-                      className="w-full px-3 py-3 bg-white text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none appearance-none"
-                  >
-                      {months.map((m, i) => (
-                          <option key={i} value={i}>{m}</option>
-                      ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
-                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                  </div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Начало</label>
+                <div 
+                    className="relative group cursor-pointer"
+                    onClick={() => openDatePicker(startDateRef)}
+                >
+                  <CalendarRange className="absolute left-3 top-3.5 text-slate-400 group-focus-within:text-primary transition-colors pointer-events-none" size={18} />
+                  <input 
+                      ref={startDateRef}
+                      type="date"
+                      value={startDate}
+                      min={formatDate(new Date())}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full pl-9 pr-2 py-3 bg-white text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm cursor-pointer"
+                      required
+                  />
                 </div>
             </div>
             <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Год</label>
-                <div className="relative">
-                  <select
-                      value={year}
-                      onChange={(e) => setYear(Number(e.target.value))}
-                      className="w-full px-3 py-3 bg-white text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none appearance-none"
-                  >
-                      <option value={today.getFullYear()}>{today.getFullYear()}</option>
-                      <option value={today.getFullYear() + 1}>{today.getFullYear() + 1}</option>
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
-                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                  </div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Конец</label>
+                <div 
+                    className="relative group cursor-pointer"
+                    onClick={() => openDatePicker(endDateRef)}
+                >
+                  <CalendarRange className="absolute left-3 top-3.5 text-slate-400 group-focus-within:text-primary transition-colors pointer-events-none" size={18} />
+                  <input
+                      ref={endDateRef}
+                      type="date"
+                      value={endDate}
+                      min={startDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full pl-9 pr-2 py-3 bg-white text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm cursor-pointer"
+                      required
+                  />
                 </div>
             </div>
           </div>
@@ -110,7 +142,7 @@ const CreateEvent: React.FC = () => {
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">Ваше имя</label>
             <div className="relative group">
-                <User className="absolute left-3 top-3.5 text-slate-400 group-focus-within:text-primary transition-colors" size={20} />
+                <User className="absolute left-3 top-3.5 text-slate-400 group-focus-within:text-primary transition-colors pointer-events-none" size={20} />
                 <input
                     type="text"
                     value={userName}

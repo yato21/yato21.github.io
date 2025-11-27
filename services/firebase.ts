@@ -30,12 +30,12 @@ export const generateId = () => Math.random().toString(36).substring(2, 9);
 // --- API ---
 
 /**
- * Creates a new event in Firestore
+ * Creates a new event in Firestore with date range
  */
 export const createEvent = async (
   eventName: string, 
-  month: number, 
-  year: number, 
+  startDate: string, 
+  endDate: string, 
   creatorName: string,
   creatorId: string
 ): Promise<string> => {
@@ -45,8 +45,8 @@ export const createEvent = async (
   const initialData: EventData = {
     id: eventId,
     name: eventName,
-    month,
-    year,
+    startDate,
+    endDate,
     participants: {
       [creatorId]: {
         name: creatorName,

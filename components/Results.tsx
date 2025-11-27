@@ -7,7 +7,7 @@ interface ResultsProps {
   eventData: EventData;
 }
 
-// --- HELPER: COLLAPSIBLE SECTION (Used for Chart only) ---
+// --- HELPER: COLLAPSIBLE SECTION ---
 const Section: React.FC<{ title: string; children: React.ReactNode; defaultOpen?: boolean }> = ({ title, children, defaultOpen = true }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
@@ -30,9 +30,12 @@ const Section: React.FC<{ title: string; children: React.ReactNode; defaultOpen?
 };
 
 // --- MINI CALENDAR COMPONENT ---
-const MiniCalendar: React.FC<{ dates: string[], baseMonth: number, baseYear: number }> = ({ dates, baseMonth, baseYear }) => {
-  const [viewMonth, setViewMonth] = useState(baseMonth);
-  const [viewYear, setViewYear] = useState(baseYear);
+const MiniCalendar: React.FC<{ dates: string[], startDateStr: string }> = ({ dates, startDateStr }) => {
+  // Determine base view from startDate of event
+  const baseDate = startDateStr ? new Date(startDateStr) : new Date();
+  
+  const [viewMonth, setViewMonth] = useState(baseDate.getMonth());
+  const [viewYear, setViewYear] = useState(baseDate.getFullYear());
 
   const prevMonth = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -127,8 +130,7 @@ const ParticipantRow: React.FC<{ participant: Participant, eventData: EventData 
         <div className="p-3 bg-white border-t border-slate-100 animate-in slide-in-from-top-1 duration-200">
           <MiniCalendar 
             dates={participant.dates || []} 
-            baseMonth={eventData.month} 
-            baseYear={eventData.year} 
+            startDateStr={eventData.startDate} 
           />
         </div>
       )}
@@ -215,7 +217,7 @@ const Results: React.FC<ResultsProps> = ({ eventData }) => {
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       
-      {/* Chart Section - Still Collapsible */}
+      {/* Chart Section */}
       <Section title="Лучшие даты">
         {chartData.length > 0 ? (
           <div className="w-full select-none">
@@ -256,7 +258,7 @@ const Results: React.FC<ResultsProps> = ({ eventData }) => {
         )}
       </Section>
 
-      {/* Participants List - ALWAYS OPEN (NOT WRAPPED IN SECTION) */}
+      {/* Participants List */}
       <div>
         <div className="flex items-center justify-between mb-4 px-1">
           <h3 className="text-lg font-bold text-slate-800">

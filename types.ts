@@ -6,10 +6,13 @@ export interface Participant {
 export interface EventData {
   id: string;
   name: string;
-  month: number; // 0-11
-  year: number;
+  startDate: string; // ISO "YYYY-MM-DD"
+  endDate: string;   // ISO "YYYY-MM-DD"
   participants: Record<string, Participant>; // Keyed by UserID
   createdAt: number;
+  // Legacy fields
+  year?: number;
+  month?: number;
 }
 
 export interface UserIdentity {
