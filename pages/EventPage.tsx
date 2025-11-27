@@ -100,91 +100,101 @@ const EventPage: React.FC = () => {
     <div className="min-h-screen bg-slate-50 pb-20 sm:pb-10">
       
       {/* Header */}
-      <header className="bg-white sticky top-0 z-20 border-b border-slate-100 shadow-sm px-4 py-3 flex items-center justify-between">
-         <div>
-            <h1 className="text-xl font-bold text-slate-800 leading-tight">{name}</h1>
+      <header className="bg-white sticky top-0 z-20 border-b border-slate-100 shadow-sm px-4 py-3 flex items-center justify-between gap-4">
+         <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold text-slate-800 leading-tight truncate">{name}</h1>
             <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Голосование</p>
          </div>
-         <button onClick={copyLink} className="p-2 text-indigo-600 bg-indigo-50 rounded-full hover:bg-indigo-100 transition-colors">
-            <Share2 size={20} />
-         </button>
+
+         {/* Desktop Tabs (Centered) */}
+         <div className="hidden sm:flex bg-slate-100 p-1 rounded-xl items-center shrink-0">
+             <button 
+               onClick={() => setActiveTab('calendar')}
+               className={`px-6 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeTab === 'calendar' ? 'bg-white text-slate-800 shadow-sm ring-1 ring-black/5' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
+             >
+               Календарь
+             </button>
+             <button 
+               onClick={() => setActiveTab('results')}
+               className={`px-6 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeTab === 'results' ? 'bg-white text-slate-800 shadow-sm ring-1 ring-black/5' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
+             >
+               Итоги
+             </button>
+         </div>
+
+         <div className="flex-1 flex justify-end">
+            <button onClick={copyLink} className="p-2 px-3 text-indigo-600 bg-indigo-50 rounded-full hover:bg-indigo-100 transition-colors flex items-center gap-2 group">
+                <span className="hidden sm:inline text-sm font-semibold group-hover:text-indigo-700">Пригласить</span>
+                <Share2 size={20} className="group-hover:scale-110 transition-transform" />
+            </button>
+         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-2xl mx-auto p-4 sm:p-6">
+      <main className="max-w-3xl mx-auto p-4 sm:p-6 mt-4 sm:mt-8">
         {activeTab === 'calendar' ? (
-           <Calendar 
-             eventData={eventData} 
-             userId={userId || ''} 
-             onToggleDate={handleDateToggle} 
-           />
+           <div className="animate-in fade-in zoom-in-95 duration-300">
+             <Calendar 
+               eventData={eventData} 
+               userId={userId || ''} 
+               onToggleDate={handleDateToggle} 
+             />
+           </div>
         ) : (
-           <Results eventData={eventData} />
+           <div className="animate-in fade-in zoom-in-95 duration-300">
+              <Results eventData={eventData} />
+           </div>
         )}
       </main>
 
       {/* Mobile Bottom Nav */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex justify-around items-center z-30 sm:hidden pb-safe">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex justify-around items-center z-30 sm:hidden pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <button 
           onClick={() => setActiveTab('calendar')}
-          className={`flex flex-col items-center gap-1 ${activeTab === 'calendar' ? 'text-primary' : 'text-slate-400'}`}
+          className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'calendar' ? 'text-primary' : 'text-slate-400 hover:text-slate-600'}`}
         >
-           <CalIcon size={24} />
+           <CalIcon size={24} strokeWidth={activeTab === 'calendar' ? 2.5 : 2} />
            <span className="text-[10px] font-bold">Календарь</span>
         </button>
         <button 
            onClick={() => setActiveTab('results')}
-           className={`flex flex-col items-center gap-1 ${activeTab === 'results' ? 'text-primary' : 'text-slate-400'}`}
+           className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'results' ? 'text-primary' : 'text-slate-400 hover:text-slate-600'}`}
         >
-           <BarChart2 size={24} />
+           <BarChart2 size={24} strokeWidth={activeTab === 'results' ? 2.5 : 2} />
            <span className="text-[10px] font-bold">Итоги</span>
         </button>
       </div>
 
-      {/* Desktop Tabs (Top Right Floating) */}
-      <div className="hidden sm:flex fixed top-4 right-4 z-50 bg-white rounded-full p-1 shadow-md border border-slate-100 gap-1">
-         <button 
-           onClick={() => setActiveTab('calendar')}
-           className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeTab === 'calendar' ? 'bg-primary text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
-         >
-           Календарь
-         </button>
-         <button 
-           onClick={() => setActiveTab('results')}
-           className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeTab === 'results' ? 'bg-primary text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
-         >
-           Итоги
-         </button>
-      </div>
-
       {/* Name Modal */}
       {showNameModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-8 shadow-2xl animate-in zoom-in-95 duration-300 scale-100">
              <div className="text-center mb-6">
-                <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <User size={24} />
+                <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-inner">
+                    <User size={28} />
                 </div>
-                <h2 className="text-xl font-bold text-slate-800">Представьтесь</h2>
-                <p className="text-slate-500 text-sm mt-1">Введите имя, чтобы проголосовать.</p>
+                <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Кто вы?</h2>
+                <p className="text-slate-500 text-sm mt-2">Представьтесь, чтобы друзья знали ваш выбор.</p>
              </div>
              <form onSubmit={handleNameSubmit}>
-                <input
-                  ref={nameInputRef}
-                  autoFocus
-                  type="text"
-                  placeholder="Ваше имя"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  className="w-full p-4 text-center text-lg border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-0 outline-none transition-colors mb-4"
-                />
-                <button 
-                  type="submit" 
-                  disabled={!userName.trim()}
-                  className="w-full bg-primary text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-600 transition-all disabled:opacity-50"
-                >
-                    Присоединиться
-                </button>
+                <div className="space-y-4">
+                  <input
+                    ref={nameInputRef}
+                    autoFocus
+                    type="text"
+                    placeholder="Ваше имя"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    className="w-full p-4 text-center text-lg bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-400 font-medium"
+                  />
+                  <button 
+                    type="submit" 
+                    disabled={!userName.trim()}
+                    className="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-500/20 hover:bg-indigo-600 hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:hover:translate-y-0 disabled:shadow-none"
+                  >
+                      Войти
+                  </button>
+                </div>
              </form>
           </div>
         </div>
