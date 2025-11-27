@@ -48,12 +48,45 @@ const EventPage: React.FC = () => {
   // Handlers
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userName.trim()) return;
+    const trimmedName = userName.trim();
+    if (!trimmedName) return;
 
+    if (eventData && eventData.participants) {
+      // Ищем, есть ли уже участник с таким именем (сравниваем без учета регистра)
+      const existingEntry = Object.entries(eventData.participants).find(([pid, p]) => {
+        if (pid === userId) return false; // Не проверяем сами себя
+        return p.name.toLowerCase() === trimmedName.toLowerCase();
+      });
+
+      if (existingEntry) {
+        const [existingId, existingParticipant] = existingEntry;
+        
+        // Спрашиваем пользователя: это он вернулся или это тезка?
+        const isReturningUser = window.confirm(
+            `Участник с именем "${existingParticipant.name}" уже есть в списке.\n\nЭто вы? Нажмите "ОК", чтобы войти под этим именем.\nНажмите "Отмена", если вы другой человек (тогда добавьте фамилию или цифру).`
+        );
+
+        if (isReturningUser) {
+            // Логика "Логина" (восстановление доступа)
+            localStorage.setItem('df_uid', existingId);
+            localStorage.setItem('df_name', existingParticipant.name);
+            setUserId(existingId);
+            setUserName(existingParticipant.name);
+            setShowNameModal(false);
+            return;
+        } else {
+            // Пользователь сказал "Это не я", значит просим уникальное имя
+            return;
+        }
+      }
+    }
+
+    // Если имя уникальное - создаем нового пользователя
     const newId = userId || generateId();
     localStorage.setItem('df_uid', newId);
-    localStorage.setItem('df_name', userName);
+    localStorage.setItem('df_name', trimmedName);
     setUserId(newId);
+    setUserName(trimmedName); // Ensure state matches trimmed version
     setShowNameModal(false);
   };
 
