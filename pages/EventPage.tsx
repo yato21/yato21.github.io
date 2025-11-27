@@ -4,7 +4,7 @@ import { subscribeToEvent, updateParticipantDates, generateId } from '../service
 import { EventData } from '../types';
 import Calendar from '../components/Calendar';
 import Results from '../components/Results';
-import { Share2, Calendar as CalIcon, BarChart2, User, Loader2 } from 'lucide-react';
+import { Share2, Calendar as CalIcon, BarChart2, User, Loader2, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 
 const EventPage: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
@@ -18,6 +18,10 @@ const EventPage: React.FC = () => {
   const [userId, setUserId] = useState<string | null>(localStorage.getItem('df_uid'));
   const [userName, setUserName] = useState<string>(localStorage.getItem('df_name') || '');
   const [showNameModal, setShowNameModal] = useState(false);
+  
+  // Modal Internal State
+  const [modalStep, setModalStep] = useState<'input' | 'confirm'>('input');
+  const [pendingIdentity, setPendingIdentity] = useState<{ id: string; name: string } | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Subscribe to Firebase
@@ -38,8 +42,6 @@ const EventPage: React.FC = () => {
       if (!userId) {
         setShowNameModal(true);
       } else {
-        // Если у пользователя есть ID, но его нет в списке участников, можно спросить имя снова
-        // или добавить автоматически. Сейчас просто проверяем наличие имени.
         if(!userName) setShowNameModal(true);
       }
     }
@@ -54,46 +56,55 @@ const EventPage: React.FC = () => {
     if (eventData && eventData.participants) {
       // Ищем, есть ли уже участник с таким именем (сравниваем без учета регистра)
       const existingEntry = Object.entries(eventData.participants).find(([pid, p]) => {
-        if (pid === userId) return false; // Не проверяем сами себя
+        if (pid === userId) return false;
         return p.name.toLowerCase() === trimmedName.toLowerCase();
       });
 
       if (existingEntry) {
         const [existingId, existingParticipant] = existingEntry;
-        
-        // Спрашиваем пользователя: это он вернулся или это тезка?
-        const isReturningUser = window.confirm(
-            `Участник с именем "${existingParticipant.name}" уже есть в списке.\n\nЭто вы? Нажмите "ОК", чтобы войти под этим именем.\nНажмите "Отмена", если вы другой человек (тогда добавьте фамилию или цифру).`
-        );
-
-        if (isReturningUser) {
-            // Логика "Логина" (восстановление доступа)
-            localStorage.setItem('df_uid', existingId);
-            localStorage.setItem('df_name', existingParticipant.name);
-            setUserId(existingId);
-            setUserName(existingParticipant.name);
-            setShowNameModal(false);
-            return;
-        } else {
-            // Пользователь сказал "Это не я", значит просим уникальное имя
-            return;
-        }
+        // Сохраняем найденного пользователя и переключаем шаг модалки
+        setPendingIdentity({ id: existingId, name: existingParticipant.name });
+        setModalStep('confirm');
+        return;
       }
     }
 
     // Если имя уникальное - создаем нового пользователя
+    registerNewUser(trimmedName);
+  };
+
+  const registerNewUser = (name: string) => {
     const newId = userId || generateId();
     localStorage.setItem('df_uid', newId);
-    localStorage.setItem('df_name', trimmedName);
+    localStorage.setItem('df_name', name);
     setUserId(newId);
-    setUserName(trimmedName); // Ensure state matches trimmed version
+    setUserName(name);
     setShowNameModal(false);
+    setModalStep('input'); // Reset for future
+  };
+
+  const confirmIdentity = () => {
+    if (pendingIdentity) {
+        localStorage.setItem('df_uid', pendingIdentity.id);
+        localStorage.setItem('df_name', pendingIdentity.name);
+        setUserId(pendingIdentity.id);
+        setUserName(pendingIdentity.name);
+        setShowNameModal(false);
+        setModalStep('input');
+        setPendingIdentity(null);
+    }
+  };
+
+  const denyIdentity = () => {
+    // Пользователь сказал "Нет", возвращаем к вводу, чтобы он изменил имя
+    setModalStep('input');
+    setPendingIdentity(null);
+    // Фокус вернется на инпут благодаря autoFocus при ре-рендере
   };
 
   const handleDateToggle = async (dateIso: string) => {
     if (!userId || !eventData) return;
     
-    // Safely access nested properties
     const participants = eventData.participants || {};
     const participantData = participants[userId];
     const currentDates = participantData?.dates || [];
@@ -201,34 +212,69 @@ const EventPage: React.FC = () => {
       {/* Name Modal */}
       {showNameModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-8 shadow-2xl animate-in zoom-in-95 duration-300 scale-100">
-             <div className="text-center mb-6">
-                <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-inner">
-                    <User size={28} />
-                </div>
-                <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Кто вы?</h2>
-                <p className="text-slate-500 text-sm mt-2">Представьтесь, чтобы друзья знали ваш выбор.</p>
-             </div>
-             <form onSubmit={handleNameSubmit}>
-                <div className="space-y-4">
-                  <input
-                    ref={nameInputRef}
-                    autoFocus
-                    type="text"
-                    placeholder="Ваше имя"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    className="w-full p-4 text-center text-lg bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-400 font-medium"
-                  />
-                  <button 
-                    type="submit" 
-                    disabled={!userName.trim()}
-                    className="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-500/20 hover:bg-indigo-600 hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:hover:translate-y-0 disabled:shadow-none"
-                  >
-                      Войти
-                  </button>
-                </div>
-             </form>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-8 shadow-2xl animate-in zoom-in-95 duration-300 scale-100 overflow-hidden relative">
+             
+             {modalStep === 'input' ? (
+               // STEP 1: Input Name
+               <>
+                 <div className="text-center mb-6">
+                    <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-inner">
+                        <User size={28} />
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Кто вы?</h2>
+                    <p className="text-slate-500 text-sm mt-2">Представьтесь, чтобы друзья знали ваш выбор.</p>
+                 </div>
+                 <form onSubmit={handleNameSubmit}>
+                    <div className="space-y-4">
+                      <input
+                        ref={nameInputRef}
+                        autoFocus
+                        type="text"
+                        placeholder="Ваше имя"
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
+                        className="w-full p-4 text-center text-lg bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-400 font-medium"
+                      />
+                      <button 
+                        type="submit" 
+                        disabled={!userName.trim()}
+                        className="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-500/20 hover:bg-indigo-600 hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:hover:translate-y-0 disabled:shadow-none"
+                      >
+                          Войти
+                      </button>
+                    </div>
+                 </form>
+               </>
+             ) : (
+               // STEP 2: Confirmation
+               <div className="text-center">
+                 <div className="w-16 h-16 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                    <AlertCircle size={32} />
+                 </div>
+                 <h2 className="text-xl font-bold text-slate-800 mb-2">Имя занято</h2>
+                 <p className="text-slate-600 mb-6 text-sm">
+                   Участник <span className="font-bold text-slate-800">"{pendingIdentity?.name}"</span> уже есть в списке.
+                 </p>
+                 
+                 <div className="space-y-3">
+                   <button 
+                      onClick={confirmIdentity}
+                      className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition-all active:scale-95"
+                   >
+                      <CheckCircle2 size={18} />
+                      Это я, войти
+                   </button>
+                   
+                   <button 
+                      onClick={denyIdentity}
+                      className="w-full flex items-center justify-center gap-2 bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-600 font-bold py-3.5 rounded-xl transition-all active:scale-95"
+                   >
+                      <XCircle size={18} />
+                      Это не я (изменить)
+                   </button>
+                 </div>
+               </div>
+             )}
           </div>
         </div>
       )}
