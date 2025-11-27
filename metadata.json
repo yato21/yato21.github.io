@@ -1,0 +1,5 @@
+{
+  "name": "DateFinder",
+  "description": "A real-time event scheduling application for friends to find the best dates.",
+  "requestFramePermissions": []
+}
