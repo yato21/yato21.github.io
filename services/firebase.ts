@@ -11,15 +11,6 @@ import {
 } from 'firebase/firestore';
 import { EventData, Participant } from '../types';
 
-// ---------------------------------------------------------------------------
-// ИНСТРУКЦИЯ ПО НАСТРОЙКЕ:
-// 1. Зайдите в Firebase Console (https://console.firebase.google.com/)
-// 2. Создайте проект и добавьте в него веб-приложение (иконка </>).
-// 3. Скопируйте объект firebaseConfig оттуда и замените объект ниже.
-// 4. ВАЖНО: В консоли Firebase зайдите в "Firestore Database" -> "Rules" 
-//    и установите: allow read, write: if true; (иначе приложение не сможет сохранять данные).
-// ---------------------------------------------------------------------------
-
 const firebaseConfig = {
   apiKey: "AIzaSyBXUDPowJ4maRPegAY8Bf2nwHXeeKgLI9w",
   authDomain: "datefinder-f7aba.firebaseapp.com",
